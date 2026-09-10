@@ -250,6 +250,57 @@
       </div>
     </section>
 
+    <!-- Modal Xem & Chỉnh Sửa Cookie của tài khoản -->
+    <div id="cookieModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            🍪 Cookie Tài Khoản: <span id="modalAccountName" class="text-rose-400"></span>
+          </h3>
+          <button type="button" onclick="closeCookieModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-300 font-medium mb-1.5">
+            Nội dung chuỗi Cookie (chứa datadome=...):
+          </label>
+          <textarea 
+            id="modalCookieTextarea" 
+            rows="5" 
+            placeholder="Dán chuỗi cookie vào đây..." 
+            class="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:ring-1 focus:ring-rose-500 custom-scrollbar leading-relaxed"
+          ></textarea>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <button 
+            type="button" 
+            onclick="copyModalCookie()" 
+            class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-xl border border-slate-700 transition"
+          >
+            📋 Sao Chép
+          </button>
+          
+          <div class="flex items-center gap-2">
+            <button 
+              type="button" 
+              onclick="closeCookieModal()" 
+              class="bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs px-3.5 py-2 rounded-xl transition"
+            >
+              Hủy
+            </button>
+            <button 
+              type="button" 
+              onclick="saveModalCookie()" 
+              class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-lg shadow-rose-900/30 transition"
+            >
+              💾 Lưu Cookie
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -477,11 +528,47 @@
           <td class="py-3 px-3 font-semibold text-white">
             ${acc.account}
           </td>
-          <td class="py-3 px-3 text-slate-300 font-mono">
-            ${acc.api2_data || '84123456789'}
+          <td class="py-3 px-3 text-slate-400 font-mono">
+            ${acc.api2_data || '—'}
           </td>
-          <td class="py-3 px-3 text-xs">
-            ${acc.cookie ? '<span class="text-emerald-400">Đã có cookie riêng</span>' : '<span class="text-slate-500">Dùng cookie mặc định</span>'}
+          <td class="py-3 px-3 text-xs max-w-[240px]">
+            ${acc.cookie ? `
+              <div class="space-y-1">
+                <div class="font-mono text-[11px] text-slate-300 truncate bg-slate-950 px-2 py-1 rounded border border-slate-800" title="${acc.cookie}">
+                  ${acc.cookie.length > 30 ? acc.cookie.substring(0, 27) + '...' : acc.cookie}
+                </div>
+                <div class="flex items-center gap-2">
+                  <button 
+                    type="button" 
+                    onclick="openCookieModal('${acc.id || acc.account}', '${acc.account}')" 
+                    class="text-[11px] text-sky-400 hover:text-sky-300 underline font-medium"
+                  >
+                    👁️ Xem / Sửa
+                  </button>
+                  <span class="text-slate-600">|</span>
+                  <button 
+                    type="button" 
+                    onclick="copyAccountCookie('${acc.id || acc.account}')" 
+                    class="text-[11px] text-slate-400 hover:text-slate-200"
+                  >
+                    📋 Copy
+                  </button>
+                </div>
+              </div>
+            ` : `
+              <div class="space-y-1">
+                <span class="text-slate-500 italic text-[11px]">Chưa có cookie</span>
+                <div>
+                  <button 
+                    type="button" 
+                    onclick="openCookieModal('${acc.id || acc.account}', '${acc.account}')" 
+                    class="text-[11px] text-rose-400 hover:underline font-medium"
+                  >
+                    ➕ Thêm Cookie
+                  </button>
+                </div>
+              </div>
+            `}
           </td>
           <td class="py-3 px-3 text-right space-x-1.5 whitespace-nowrap">
             <button 
@@ -576,6 +663,83 @@
         if (res.ok && json.success) {
           currentAccounts = json.accounts || [];
           renderAccountsTable();
+        }
+      } catch (err) {
+        showToast(`Lỗi: ${err.message}`, false);
+      }
+    }
+
+    // ==========================================
+    // MODAL XEM & CHỈNH SỬA COOKIE
+    // ==========================================
+    const cookieModal = document.getElementById('cookieModal');
+    const modalAccountName = document.getElementById('modalAccountName');
+    const modalCookieTextarea = document.getElementById('modalCookieTextarea');
+    let activeEditingAccountId = null;
+
+    function openCookieModal(id, accountName) {
+      const acc = currentAccounts.find(a => (a.id === id || a.account === id || a.account === accountName));
+      if (!acc) return;
+
+      activeEditingAccountId = acc.id || acc.account;
+      modalAccountName.textContent = acc.account;
+      modalCookieTextarea.value = acc.cookie || '';
+      cookieModal.classList.remove('hidden');
+    }
+
+    function closeCookieModal() {
+      cookieModal.classList.add('hidden');
+      activeEditingAccountId = null;
+    }
+
+    function copyModalCookie() {
+      const val = modalCookieTextarea.value.trim();
+      if (!val) {
+        showToast('Không có cookie để sao chép!', false);
+        return;
+      }
+      navigator.clipboard.writeText(val);
+      showToast('Đã sao chép Cookie vào clipboard!', true);
+    }
+
+    function copyAccountCookie(id) {
+      const acc = currentAccounts.find(a => (a.id === id || a.account === id));
+      if (!acc || !acc.cookie) {
+        showToast('Tài khoản này chưa có cookie!', false);
+        return;
+      }
+      navigator.clipboard.writeText(acc.cookie);
+      showToast(`Đã sao chép Cookie của "${acc.account}"!`, true);
+    }
+
+    async function saveModalCookie() {
+      if (!activeEditingAccountId) return;
+      const acc = currentAccounts.find(a => (a.id === activeEditingAccountId || a.account === activeEditingAccountId));
+      if (!acc) return;
+
+      const newCookie = modalCookieTextarea.value.trim();
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'add',
+            account: acc.account,
+            api2_data: acc.api2_data,
+            cookie: newCookie
+          })
+        });
+
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast(`Đã cập nhật Cookie cho "${acc.account}" thành công!`, true);
+          currentAccounts = json.accounts || [];
+          renderAccountsTable();
+          closeCookieModal();
+          log(`🍪 Đã cập nhật Cookie mới cho tài khoản "${acc.account}"`, 'success');
+        } else {
+          showToast(json.error || 'Lỗi khi lưu cookie', false);
         }
       } catch (err) {
         showToast(`Lỗi: ${err.message}`, false);

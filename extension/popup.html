@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      width: 320px;
+      margin: 0;
+      padding: 16px;
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-size: 13px;
+    }
+    h3 {
+      margin: 0 0 12px 0;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #fb7185;
+    }
+    .field {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 12px;
+    }
+    input:focus {
+      outline: none;
+      border-color: #e11d48;
+    }
+    button {
+      width: 100%;
+      padding: 9px;
+      background-color: #e11d48;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover {
+      background-color: #be123c;
+    }
+    .status-box {
+      margin-top: 12px;
+      padding: 10px;
+      background-color: #1e293b;
+      border-radius: 8px;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #10b981;
+      margin-right: 6px;
+    }
+    .link {
+      display: block;
+      margin-top: 8px;
+      text-align: center;
+      color: #38bdf8;
+      font-size: 11px;
+      text-decoration: none;
+    }
+    .link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h3>⚡ Garena Cookie Sync</h3>
+
+  <div class="field">
+    <label>URL của Tool (Local hoặc Vercel):</label>
+    <input type="text" id="apiUrlInput" placeholder="http://localhost:3000/api/config" />
+  </div>
+
+  <button id="btnSyncNow">🔄 Đồng Bộ Cookie Ngay</button>
+
+  <div class="status-box">
+    <div><span class="status-dot"></span>Trạng thái: <strong id="statusText">Sẵn sàng</strong></div>
+    <div style="color: #94a3b8; margin-top: 4px;">Lần gửi gần nhất: <span id="lastSyncText">Chưa có</span></div>
+  </div>
+
+  <a href="https://account.garena.com/recovery" target="_blank" class="link">👉 Mở trang Garena để tạo Cookie</a>
+
+  <script src="popup.js"></script>
+</body>
+</html>

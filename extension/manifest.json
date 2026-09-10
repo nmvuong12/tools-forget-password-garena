@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Garena Cookie Auto-Sync",
+  "version": "1.0.0",
+  "description": "Tự động đồng bộ Cookie DataDome từ trình duyệt về Tool Scheduler",
+  "permissions": [
+    "cookies",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.garena.com/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*",
+    "https://*.vercel.app/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Garena Cookie Auto-Sync"
+  }
+}

@@ -9,7 +9,8 @@ const {
   deleteAccount,
   toggleAccount,
   getScheduleTimes,
-  updateScheduleTimes
+  updateScheduleTimes,
+  updateGlobalCookie
 } = require('../lib/storage');
 
 module.exports = async (req, res) => {
@@ -65,6 +66,18 @@ module.exports = async (req, res) => {
           success: true,
           message: 'Đã cập nhật lịch chạy tự động thành công!',
           schedule_times: updatedTimes
+        });
+      }
+
+      // Cập nhật Cookie từ Chrome Extension
+      if (action === 'update_cookie') {
+        if (!body.cookie) {
+          return res.status(400).json({ success: false, error: 'Thiếu chuỗi cookie' });
+        }
+        await updateGlobalCookie(body.cookie);
+        return res.status(200).json({
+          success: true,
+          message: 'Đã cập nhật Cookie từ Extension thành công!'
         });
       }
 
