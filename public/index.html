@@ -46,7 +46,7 @@
       </div>
       <div class="flex items-center gap-2 bg-slate-800/80 px-3.5 py-1.5 rounded-full border border-slate-700/50 text-xs">
         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span class="text-slate-300 font-medium">Lịch chạy: 15:00 & 03:00 (UTC+7)</span>
+        <span id="headerScheduleBadge" class="text-slate-300 font-medium">Lịch chạy: 15:00 & 03:00 (UTC+7)</span>
       </div>
     </header>
 
@@ -126,7 +126,70 @@
       <div id="statusToast" class="hidden p-3 rounded-xl text-xs text-center font-medium transition-all"></div>
     </section>
 
-    <!-- Card 2: Danh sách tài khoản hiện có -->
+    <!-- Card 2: Cài đặt Khung Giờ Chạy Tự Động (MỚI) -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+            ⏰ Cài Đặt Khung Giờ Chạy Tự Động (Giờ VN - UTC+7)
+          </h2>
+          <p class="text-xs text-slate-400">Tùy chỉnh các mốc thời gian trong ngày để hệ thống tự động chạy</p>
+        </div>
+
+        <button 
+          id="btnSaveSchedule" 
+          onclick="handleSaveSchedule()" 
+          class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-md shadow-rose-900/30 flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
+        >
+          <span>💾</span>
+          <span>Lưu Cài Đặt Lịch Chạy</span>
+        </button>
+      </div>
+
+      <!-- Danh sách các mốc giờ đang kích hoạt -->
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-2">Các mốc giờ đang được kích hoạt:</label>
+        <div id="scheduleChipsContainer" class="flex flex-wrap items-center gap-2">
+          <!-- Chips render bằng JS -->
+        </div>
+      </div>
+
+      <!-- Khung thêm mốc giờ mới -->
+      <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 flex flex-wrap items-center gap-3">
+        <span class="text-xs text-slate-300 font-medium">Thêm mốc giờ:</span>
+        <div class="flex items-center gap-1.5">
+          <select id="selectHour" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-rose-500">
+            <!-- 00 - 23 được render bằng JS -->
+          </select>
+          <span class="text-slate-500 font-bold">:</span>
+          <select id="selectMinute" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-rose-500">
+            <option value="0">00</option>
+            <option value="15">15</option>
+            <option value="30">30</option>
+            <option value="45">45</option>
+          </select>
+        </div>
+        <button 
+          type="button" 
+          onclick="handleAddScheduleTime()" 
+          class="bg-slate-800 hover:bg-slate-700 text-white text-xs px-3 py-1.5 rounded-lg border border-slate-700 transition"
+        >
+          ➕ Thêm Mốc Giờ
+        </button>
+
+        <!-- Nút chọn mẫu nhanh -->
+        <div class="flex items-center gap-2 ml-auto text-xs">
+          <span class="text-slate-500">Chọn mẫu nhanh:</span>
+          <button type="button" onclick="setPresetSchedule('default')" class="text-xs text-rose-400 hover:underline">15h & 3h sáng</button>
+          <span class="text-slate-700">|</span>
+          <button type="button" onclick="setPresetSchedule('morning_evening')" class="text-xs text-rose-400 hover:underline">8h & 20h</button>
+          <span class="text-slate-700">|</span>
+          <button type="button" onclick="setPresetSchedule('every_6h')" class="text-xs text-rose-400 hover:underline">Mỗi 6 tiếng</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 3: Danh sách tài khoản hiện có -->
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
         <div>
@@ -168,7 +231,7 @@
       </div>
     </section>
 
-    <!-- Card 3: Live Console -->
+    <!-- Card 4: Live Console -->
     <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-3">
       <div class="flex items-center justify-between">
         <h3 class="text-xs font-semibold text-slate-300 flex items-center gap-2">
@@ -201,8 +264,26 @@
     const statusToast = document.getElementById('statusToast');
     const consoleOutput = document.getElementById('consoleOutput');
     const btnTriggerAll = document.getElementById('btnTriggerAll');
+    const btnSaveSchedule = document.getElementById('btnSaveSchedule');
+    const headerScheduleBadge = document.getElementById('headerScheduleBadge');
+    const scheduleChipsContainer = document.getElementById('scheduleChipsContainer');
+    const selectHour = document.getElementById('selectHour');
+    const selectMinute = document.getElementById('selectMinute');
 
     let currentAccounts = [];
+    let currentScheduleTimes = [
+      { hour: 3, minute: 0 },
+      { hour: 15, minute: 0 }
+    ];
+
+    // Khởi tạo danh sách giờ từ 00 đến 23 vào dropdown
+    for (let h = 0; h <= 23; h++) {
+      const opt = document.createElement('option');
+      opt.value = h;
+      opt.textContent = `${String(h).padStart(2, '0')}h (${h < 12 ? 'Sáng' : h === 12 ? 'Trưa' : h < 18 ? 'Chiều' : 'Tối'})`;
+      selectHour.appendChild(opt);
+    }
+    selectHour.value = 15;
 
     function log(msg, type = 'info') {
       const line = document.createElement('div');
@@ -237,21 +318,124 @@
       box.classList.toggle('hidden');
     }
 
-    // Tải danh sách tài khoản
-    async function loadAccounts() {
+    // ==========================================
+    // QUẢN LÝ LỊCH CHẠY TỰ ĐỘNG
+    // ==========================================
+    function renderScheduleChips() {
+      scheduleChipsContainer.innerHTML = '';
+
+      if (currentScheduleTimes.length === 0) {
+        scheduleChipsContainer.innerHTML = '<span class="text-xs text-rose-400 italic">Chưa chọn mốc giờ nào (Hệ thống sẽ không tự động kích hoạt)</span>';
+        headerScheduleBadge.textContent = 'Chưa bật lịch tự động';
+        return;
+      }
+
+      currentScheduleTimes.sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute));
+
+      const timeTexts = currentScheduleTimes.map(t => {
+        return `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
+      });
+      headerScheduleBadge.textContent = `Lịch chạy: ${timeTexts.join(', ')} (UTC+7)`;
+
+      currentScheduleTimes.forEach((t, idx) => {
+        const chip = document.createElement('div');
+        const formatted = `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
+        const period = t.hour < 12 ? 'Sáng' : t.hour === 12 ? 'Trưa' : t.hour < 18 ? 'Chiều' : 'Tối';
+
+        chip.className = 'inline-flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 text-rose-300 px-3 py-1 rounded-xl text-xs font-medium';
+        chip.innerHTML = `
+          <span>⏰ ${formatted} (${period})</span>
+          <button type="button" onclick="handleRemoveScheduleTime(${idx})" class="hover:text-rose-100 ml-1 text-rose-400/80 font-bold">✕</button>
+        `;
+        scheduleChipsContainer.appendChild(chip);
+      });
+    }
+
+    function handleAddScheduleTime() {
+      const hour = Number(selectHour.value);
+      const minute = Number(selectMinute.value);
+
+      const exists = currentScheduleTimes.some(t => t.hour === hour && t.minute === minute);
+      if (exists) {
+        showToast('Mốc giờ này đã có trong lịch!', false);
+        return;
+      }
+
+      currentScheduleTimes.push({ hour, minute });
+      renderScheduleChips();
+    }
+
+    function handleRemoveScheduleTime(index) {
+      currentScheduleTimes.splice(index, 1);
+      renderScheduleChips();
+    }
+
+    function setPresetSchedule(type) {
+      if (type === 'default') {
+        currentScheduleTimes = [{ hour: 3, minute: 0 }, { hour: 15, minute: 0 }];
+      } else if (type === 'morning_evening') {
+        currentScheduleTimes = [{ hour: 8, minute: 0 }, { hour: 20, minute: 0 }];
+      } else if (type === 'every_6h') {
+        currentScheduleTimes = [
+          { hour: 0, minute: 0 },
+          { hour: 6, minute: 0 },
+          { hour: 12, minute: 0 },
+          { hour: 18, minute: 0 }
+        ];
+      }
+      renderScheduleChips();
+    }
+
+    async function handleSaveSchedule() {
+      btnSaveSchedule.disabled = true;
+      btnSaveSchedule.classList.add('opacity-50');
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_schedule',
+            schedule_times: currentScheduleTimes
+          })
+        });
+
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast('Đã lưu cấu hình lịch chạy mới thành công!', true);
+          const timeList = currentScheduleTimes.map(t => `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`).join(', ');
+          log(`⏰ Đã lưu lịch chạy tự động mới: [ ${timeList} ] (Giờ VN)`, 'success');
+        } else {
+          showToast(json.error || 'Có lỗi xảy ra', false);
+        }
+      } catch (err) {
+        showToast(`Lỗi: ${err.message}`, false);
+      } finally {
+        btnSaveSchedule.disabled = false;
+        btnSaveSchedule.classList.remove('opacity-50');
+      }
+    }
+
+    // ==========================================
+    // QUẢN LÝ TÀI KHOẢN
+    // ==========================================
+    async function loadData() {
       try {
         const res = await fetch('/api/config');
         if (res.ok) {
           const json = await res.json();
           currentAccounts = json.accounts || [];
+          if (json.settings && Array.isArray(json.settings.schedule_times)) {
+            currentScheduleTimes = json.settings.schedule_times;
+          }
+          renderScheduleChips();
           renderAccountsTable();
         }
       } catch (err) {
-        log(`Không thể tải danh sách tài khoản: ${err.message}`, 'warn');
+        log(`Không thể tải dữ liệu: ${err.message}`, 'warn');
       }
     }
 
-    // Hiển thị bảng tài khoản
     function renderAccountsTable() {
       accountsCount.textContent = currentAccounts.length;
 
@@ -310,7 +494,6 @@
       `).join('');
     }
 
-    // Thêm tài khoản mới
     async function handleAddAccount() {
       const account = newAccountInput.value.trim();
       const api2_data = newPhoneInput.value.trim() || "84123456789";
@@ -341,7 +524,7 @@
           newCookieInput.value = '';
           currentAccounts = json.accounts || [];
           renderAccountsTable();
-          log(`➕ Đã thêm tài khoản "${account}" vào danh sách chạy tự động`, 'success');
+          log(`➕ Đã thêm tài khoản "${account}" vào danh sách`, 'success');
         } else {
           showToast(json.error || 'Có lỗi xảy ra', false);
         }
@@ -350,7 +533,6 @@
       }
     }
 
-    // Xóa tài khoản
     async function handleDeleteAccount(id, accountName) {
       if (!confirm(`Bạn có chắc muốn xóa tài khoản "${accountName}" khỏi danh sách?`)) return;
 
@@ -373,7 +555,6 @@
       }
     }
 
-    // Bật/tắt tài khoản
     async function handleToggleAccount(id) {
       try {
         const res = await fetch('/api/config', {
@@ -392,10 +573,74 @@
       }
     }
 
-    // Chạy riêng 1 tài khoản
-    async function handleTriggerSingle(accountName) {
+    // ==========================================
+    // HIỂN THỊ LOG CHI TIẾT
+    // ==========================================
+    function formatResponseBody(res) {
+      if (!res) return 'Không có dữ liệu';
+      if (typeof res === 'string') return res;
+      if (res.message && res.result !== undefined) return `Result: ${res.result} (${res.message})`;
+      if (res.status && res.result !== undefined) return `Result: ${res.result} (${res.status})`;
+      if (res.error) return `Lỗi: ${res.error}`;
+      try {
+        const str = JSON.stringify(res);
+        return str.length > 90 ? str.substring(0, 87) + '...' : str;
+      } catch (e) {
+        return String(res);
+      }
+    }
+
+    function displayDetailedLogs(result) {
+      if (!result || !result.summary || result.summary.length === 0) {
+        log('Không có dữ liệu chi tiết trả về', 'warn');
+        return;
+      }
+
+      result.summary.forEach((accData) => {
+        log(`-----------------------------------------------------------`);
+        log(`👤 TÀI KHOẢN: <span class="text-white font-bold text-sm">${accData.account}</span> (SĐT: <span class="text-amber-300">${accData.phone}</span>)`, 'highlight');
+
+        if (!accData.rounds || accData.rounds.length === 0) {
+          log(`   ⚠️ Không có lượt chạy nào được ghi nhận cho tài khoản này`, 'warn');
+          return;
+        }
+
+        accData.rounds.forEach((round) => {
+          if (round.status === 'SUCCESS') {
+            const reqId = round.extracted_request_id || 'N/A';
+            const shortReqId = reqId.length > 24 ? reqId.substring(0, 20) + '...' : reqId;
+            log(`   🟢 [INIT ĐỢT ${round.init_round}/2] HTTP ${round.init_http_status || 200} | request_id: <span class="text-amber-300 font-mono">${shortReqId}</span> (${round.duration_ms}ms)`, 'success');
+          } else if (round.status === 'BLOCKED_BY_DATADOME') {
+            log(`   🔴 [INIT ĐỢT ${round.init_round}/2] HTTP 403 BỊ CHẶN BỞI DATADOME CAPTCHA! Vui lòng cập nhật Cookie mới.`, 'error');
+          } else if (round.status === 'FAILED_NO_REQUEST_ID') {
+            log(`   🔴 [INIT ĐỢT ${round.init_round}/2] HTTP ${round.init_http_status || 'ERR'} - Không lấy được request_id từ API 1`, 'error');
+          } else if (round.status === 'FETCH_ERROR') {
+            log(`   🔴 [INIT ĐỢT ${round.init_round}/2] LỖI KẾT NỐI: ${round.error}`, 'error');
+          } else {
+            log(`   🔴 [INIT ĐỢT ${round.init_round}/2] Trạng thái: ${round.status}`, 'warn');
+          }
+
+          if (round.submits && round.submits.length > 0) {
+            round.submits.forEach((sub) => {
+              const respStr = formatResponseBody(sub.response || sub.error);
+              if (sub.http_status === 200) {
+                log(`      ↳ [SUBMIT ${sub.submit_index}/3] ✅ HTTP 200 | Phản hồi: <span class="text-emerald-300 font-mono">${respStr}</span>`);
+              } else {
+                log(`      ↳ [SUBMIT ${sub.submit_index}/3] ❌ HTTP ${sub.http_status || 'LỖI'} | Phản hồi: <span class="text-rose-300 font-mono">${respStr}</span>`, 'error');
+              }
+            });
+          }
+        });
+      });
+
       log(`-----------------------------------------------------------`);
+      log(`🏁 HOÀN TẤT: Tổng ${result.total_accounts_processed || result.summary.length} tài khoản trong ${result.total_duration_ms}ms`, 'success');
+    }
+
+    async function handleTriggerSingle(accountName) {
+      log(`===========================================================`);
       log(`🚀 BẮT ĐẦU CHẠY RIÊNG CHO TÀI KHOẢN: "${accountName}"`, 'highlight');
+      log(`Đang gửi request tới API Garena...`);
 
       try {
         const res = await fetch('/api/cron', {
@@ -412,10 +657,11 @@
 
         const result = await res.json();
         if (result.success) {
-          log(`🎉 Hoàn tất kiểm tra cho acc "${accountName}" (${result.total_duration_ms}ms)!`, 'success');
+          displayDetailedLogs(result);
           showToast(`Đã chạy xong cho "${accountName}"!`, true);
         } else {
           log(`❌ Thất bại: ${result.error}`, 'error');
+          if (result.summary) displayDetailedLogs(result);
           showToast(`Lỗi: ${result.error}`, false);
         }
       } catch (err) {
@@ -423,7 +669,6 @@
       }
     }
 
-    // Chạy TẤT CẢ các tài khoản
     async function handleTriggerAll() {
       const activeAccounts = currentAccounts.filter(a => a.enabled !== false);
       if (activeAccounts.length === 0) {
@@ -437,7 +682,7 @@
       log(`===========================================================`);
       log(`⚡ KÍCH HOẠT TIẾN TRÌNH CHO TẤT CẢ (${activeAccounts.length}) TÀI KHOẢN`, 'highlight');
       log(`Danh sách: ${activeAccounts.map(a => a.account).join(', ')}`);
-      log(`Vui lòng chờ tiến trình hoàn tất...`);
+      log(`Đang gửi request tới API Garena, vui lòng chờ...`);
 
       try {
         const res = await fetch('/api/cron', {
@@ -451,10 +696,11 @@
 
         const result = await res.json();
         if (result.success) {
-          log(`🎉 HOÀN TẤT TOÀN BỘ ${result.total_accounts_processed} TÀI KHOẢN (${result.total_duration_ms}ms)!`, 'success');
+          displayDetailedLogs(result);
           showToast(`Đã hoàn tất chạy cho ${result.total_accounts_processed} tài khoản!`, true);
         } else {
           log(`❌ Lỗi: ${result.error}`, 'error');
+          if (result.summary) displayDetailedLogs(result);
           showToast(result.error, false);
         }
       } catch (err) {
@@ -465,7 +711,7 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', loadAccounts);
+    window.addEventListener('DOMContentLoaded', loadData);
   </script>
 </body>
 </html>

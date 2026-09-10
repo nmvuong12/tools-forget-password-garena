@@ -1,8 +1,5 @@
 /**
- * API Endpoint: Quản lý danh sách Đa Tài Khoản
- * Các phương thức:
- * - GET: Trả về danh sách tài khoản
- * - POST: Thêm mới, cập nhật, xóa, hoặc bật/tắt tài khoản
+ * API Endpoint: Quản lý danh sách Đa Tài Khoản & Lịch Chạy Tự Động
  */
 
 const {
@@ -10,7 +7,9 @@ const {
   getAccounts,
   addOrUpdateAccount,
   deleteAccount,
-  toggleAccount
+  toggleAccount,
+  getScheduleTimes,
+  updateScheduleTimes
 } = require('../lib/storage');
 
 module.exports = async (req, res) => {
@@ -25,17 +24,23 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // 1. LẤY DANH SÁCH TÀI KHOẢN
+    // 1. LẤY DỮ LIỆU TÀI KHOẢN & LỊCH CHẠY
     if (req.method === 'GET') {
       const data = await getAllData();
       return res.status(200).json({
         success: true,
         accounts: data.accounts || [],
+        settings: data.settings || {
+          schedule_times: [
+            { hour: 3, minute: 0 },
+            { hour: 15, minute: 0 }
+          ]
+        },
         updated_at: data.updated_at
       });
     }
 
-    // 2. THAO TÁC (THÊM / SỬA / XÓA / BẬT-TẮT)
+    // 2. THAO TÁC CẬP NHẬT
     if (req.method === 'POST') {
       let body = req.body;
       if (typeof body === 'string') {
@@ -47,6 +52,20 @@ module.exports = async (req, res) => {
       }
 
       const action = body.action || 'add';
+
+      // Cập nhật lịch chạy tự động
+      if (action === 'update_schedule') {
+        if (!Array.isArray(body.schedule_times)) {
+          return res.status(400).json({ success: false, error: 'Thiếu danh sách schedule_times' });
+        }
+
+        const updatedTimes = await updateScheduleTimes(body.schedule_times);
+        return res.status(200).json({
+          success: true,
+          message: 'Đã cập nhật lịch chạy tự động thành công!',
+          schedule_times: updatedTimes
+        });
+      }
 
       // Xóa tài khoản
       if (action === 'delete') {

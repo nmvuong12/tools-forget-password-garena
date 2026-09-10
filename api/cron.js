@@ -270,7 +270,9 @@ module.exports = async (req, res) => {
         accExecutionRounds.push({
           init_round: i,
           status: 'SUCCESS',
+          init_http_status: api1Response.status,
           extracted_request_id: requestId,
+          init_response: api1ResponseBody,
           duration_ms: Date.now() - initStart,
           submits: roundSubmits
         });

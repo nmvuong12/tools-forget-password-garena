@@ -1,6 +1,6 @@
 /**
  * Web Server cục bộ (Local Server)
- * Phục vụ giao diện tĩnh và các API endpoint trên máy của bạn
+ * Phục vụ giao diện tĩnh, API, và TỰ ĐỘNG LẬP LỊCH theo cấu hình động từ giao diện
  * Chạy lệnh: node server.js -> Truy cập: http://localhost:3000
  */
 
@@ -24,6 +24,7 @@ if (fs.existsSync(envPath)) {
 
 const configHandler = require('./api/config');
 const cronHandler = require('./api/cron');
+const { getScheduleTimes } = require('./lib/storage');
 
 const PORT = process.env.PORT || 3000;
 
@@ -46,7 +47,6 @@ const server = http.createServer(async (req, res) => {
     for await (const chunk of req) body += chunk;
     req.body = body ? JSON.parse(body) : {};
 
-    // Giả lập trợ giúp res.status().json()
     res.status = (code) => {
       res.statusCode = code;
       return res;
@@ -81,9 +81,62 @@ const server = http.createServer(async (req, res) => {
   res.end('Not Found');
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
+  const initialSchedules = await getScheduleTimes();
+  const timesStr = initialSchedules.map(t => `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`).join(', ');
+
   console.log(`\n===========================================================`);
-  console.log(`🚀 Giao diện Web Bảng Điều Khiển đang chạy tại:`);
+  console.log(`🚀 Giao diện Web Bảng Quản Lý đang chạy tại:`);
   console.log(`👉 http://localhost:${PORT}`);
+  console.log(`⏰ Lịch chạy tự động hiện tại (Giờ VN): [ ${timesStr} ]`);
+  console.log(`💡 Bạn có thể tùy chỉnh lịch này trực tiếp trên giao diện web!`);
   console.log(`===========================================================\n`);
 });
+
+// ================================================================
+// BỘ HẸN GIỜ TỰ ĐỘNG THEO LỊCH ĐỘNG (Dynamic Local Cron Timer)
+// Đọc lịch từ file cấu hình/giao diện và kích hoạt đúng giờ
+// ================================================================
+let lastExecutedKey = '';
+
+setInterval(async () => {
+  try {
+    const now = new Date();
+    const vnDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+    const currentHour = vnDate.getHours();
+    const currentMinute = vnDate.getMinutes();
+    const currentKey = `${currentHour}:${currentMinute}`;
+
+    // Lấy cấu hình lịch động mới nhất từ storage
+    const scheduleTimes = await getScheduleTimes();
+    const isMatched = scheduleTimes.some(
+      (st) => Number(st.hour) === currentHour && Number(st.minute) === currentMinute
+    );
+
+    if (isMatched) {
+      if (lastExecutedKey !== currentKey) {
+        lastExecutedKey = currentKey;
+        const timeFormatted = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+        console.log(`\n⏰ [HẸN GIỜ TỰ ĐỘNG] Đã đến ${timeFormatted} (Giờ VN)! Kích hoạt tiến trình...`);
+
+        const mockReq = { headers: { 'x-requested-from': 'web-ui' }, body: {} };
+        const mockRes = {
+          statusCode: 200,
+          setHeader() {},
+          status(code) { this.statusCode = code; return this; },
+          json(data) {
+            console.log(`[HẸN GIỜ TỰ ĐỘNG] Hoàn tất đợt chạy lúc ${timeFormatted}:`, data.success ? 'THÀNH CÔNG' : 'LỖI');
+          }
+        };
+
+        await cronHandler(mockReq, mockRes);
+      }
+    } else {
+      if (lastExecutedKey === currentKey) {
+        lastExecutedKey = '';
+      }
+    }
+  } catch (err) {
+    console.error('[HẸN GIỜ TỰ ĐỘNG LỖI]:', err.message);
+  }
+}, 30000);
