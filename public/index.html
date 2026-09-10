@@ -163,10 +163,7 @@
           </select>
           <span class="text-slate-500 font-bold">:</span>
           <select id="selectMinute" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-rose-500">
-            <option value="0">00</option>
-            <option value="15">15</option>
-            <option value="30">30</option>
-            <option value="45">45</option>
+            <!-- 00 - 59 được render bằng JS -->
           </select>
         </div>
         <button 
@@ -284,6 +281,15 @@
       selectHour.appendChild(opt);
     }
     selectHour.value = 15;
+
+    // Khởi tạo danh sách phút từ 00 đến 59 vào dropdown
+    for (let m = 0; m <= 59; m++) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = `${String(m).padStart(2, '0')} phút`;
+      selectMinute.appendChild(opt);
+    }
+    selectMinute.value = 0;
 
     function log(msg, type = 'info') {
       const line = document.createElement('div');
