@@ -351,7 +351,7 @@
       });
     }
 
-    function handleAddScheduleTime() {
+    async function handleAddScheduleTime() {
       const hour = Number(selectHour.value);
       const minute = Number(selectMinute.value);
 
@@ -363,14 +363,16 @@
 
       currentScheduleTimes.push({ hour, minute });
       renderScheduleChips();
+      await handleSaveSchedule();
     }
 
-    function handleRemoveScheduleTime(index) {
+    async function handleRemoveScheduleTime(index) {
       currentScheduleTimes.splice(index, 1);
       renderScheduleChips();
+      await handleSaveSchedule();
     }
 
-    function setPresetSchedule(type) {
+    async function setPresetSchedule(type) {
       if (type === 'default') {
         currentScheduleTimes = [{ hour: 3, minute: 0 }, { hour: 15, minute: 0 }];
       } else if (type === 'morning_evening') {
@@ -384,6 +386,7 @@
         ];
       }
       renderScheduleChips();
+      await handleSaveSchedule();
     }
 
     async function handleSaveSchedule() {
@@ -711,7 +714,33 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', loadData);
+    // Tự động kiểm tra và hiển thị log khi server chạy ngầm theo lịch
+    let lastSeenRunSavedAt = null;
+
+    async function pollLatestLogs() {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.latest_run && json.latest_run.saved_at) {
+            if (!lastSeenRunSavedAt) {
+              lastSeenRunSavedAt = json.latest_run.saved_at;
+            } else if (lastSeenRunSavedAt !== json.latest_run.saved_at) {
+              lastSeenRunSavedAt = json.latest_run.saved_at;
+              const runTime = new Date(json.latest_run.saved_at).toLocaleTimeString();
+              log(`===========================================================`);
+              log(`⏰ [PHÁT HIỆN ĐỢT CHẠY TỰ ĐỘNG THEO HẸN GIỜ] (${runTime})`, 'highlight');
+              displayDetailedLogs(json.latest_run);
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadData();
+      setInterval(pollLatestLogs, 3000); // Tự động quét log mới mỗi 3 giây
+    });
   </script>
 </body>
 </html>

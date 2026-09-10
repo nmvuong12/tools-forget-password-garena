@@ -6,7 +6,7 @@
  * - Có thời gian nghỉ an toàn giữa các lượt submit và giữa các tài khoản
  */
 
-const { getAccounts } = require('../lib/storage');
+const { getAccounts, saveLatestRun } = require('../lib/storage');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -300,22 +300,36 @@ module.exports = async (req, res) => {
     console.log(`[CRON] Hoàn tất toàn bộ ${targetAccounts.length} tài khoản sau ${totalDuration}ms`);
     console.log(`===========================================================\n`);
 
-    return res.status(200).json({
+    const finalResult = {
       success: true,
       total_accounts_processed: targetAccounts.length,
       total_duration_ms: totalDuration,
       timestamp: new Date().toISOString(),
       summary: accountsSummary
-    });
+    };
+
+    try {
+      await saveLatestRun(finalResult);
+    } catch (e) {}
+
+    return res.status(200).json(finalResult);
 
   } catch (error) {
     const totalDuration = Date.now() - startTime;
     console.error(`[CRON] Lỗi nghiêm trọng:`, error.message);
-    return res.status(500).json({
+
+    const errorResult = {
       success: false,
       total_duration_ms: totalDuration,
       error: error.message,
+      timestamp: new Date().toISOString(),
       summary: accountsSummary
-    });
+    };
+
+    try {
+      await saveLatestRun(errorResult);
+    } catch (e) {}
+
+    return res.status(500).json(errorResult);
   }
 };

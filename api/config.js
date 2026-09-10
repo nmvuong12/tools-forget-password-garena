@@ -36,6 +36,7 @@ module.exports = async (req, res) => {
             { hour: 15, minute: 0 }
           ]
         },
+        latest_run: data.latest_run || null,
         updated_at: data.updated_at
       });
     }
