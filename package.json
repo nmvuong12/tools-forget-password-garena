@@ -1,0 +1,22 @@
+{
+  "name": "vercel-api-scheduler",
+  "version": "1.0.0",
+  "description": "Tự động chạy chuỗi 2 API tuần tự định kỳ 2 ngày 1 lần trên Vercel Cron kèm giao diện tĩnh quản lý tài khoản",
+  "main": "api/cron.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test-mock": "node test-local.js --mock",
+    "test": "node test-local.js"
+  },
+  "keywords": [
+    "vercel",
+    "cron",
+    "scheduler",
+    "garena",
+    "api-automation"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bảng Điều Khiển Garena API Scheduler</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: '#e11d48',
+            brandDark: '#be123c',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center p-4 md:p-8">
+
+  <div class="w-full max-w-3xl space-y-6">
+
+    <!-- Header -->
+    <header class="bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 flex items-center justify-center font-bold text-lg shadow-lg shadow-rose-600/30">
+            ⚡
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-white tracking-tight">Garena API Scheduler</h1>
+            <p class="text-xs text-slate-400">Tiến trình tự động Vercel Cron (2 ngày 1 lần)</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700/50 text-xs">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="text-slate-300 font-medium">Lịch chạy: 15:00 & 03:00 (UTC+7)</span>
+      </div>
+    </header>
+
+    <!-- Main Config Card -->
+    <main class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
+      <div class="border-b border-slate-800 pb-4 flex justify-between items-center">
+        <h2 class="text-base font-semibold text-white flex items-center gap-2">
+          ⚙️ Cấu Hình Thông Số Tiến Trình
+        </h2>
+        <span id="lastUpdated" class="text-xs text-slate-400">Đang tải cấu hình...</span>
+      </div>
+
+      <!-- Form Inputs -->
+      <div class="space-y-4">
+        <!-- Input 1: API1_ACCOUNT (Mục tiêu chính của người dùng) -->
+        <div>
+          <label for="accountInput" class="block text-sm font-medium text-rose-400 mb-1.5 flex items-center justify-between">
+            <span>🎯 Tài khoản Garena (API1_ACCOUNT) *</span>
+            <span class="text-xs text-slate-400 font-normal">Sử dụng cho lần chạy tiếp theo</span>
+          </label>
+          <div class="relative">
+            <input 
+              type="text" 
+              id="accountInput" 
+              placeholder="Nhập tên tài khoản, ví dụ: nghjalsss" 
+              class="w-full bg-slate-950 border-2 border-rose-500/40 focus:border-rose-500 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-500/20 text-base font-medium transition-all"
+            >
+            <button 
+              onclick="copyAccount()" 
+              title="Copy tài khoản" 
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded-md border border-slate-700 transition"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <!-- Input 2: API2_DATA (Số điện thoại) -->
+        <div>
+          <label for="dataInput" class="block text-sm font-medium text-slate-300 mb-1.5">
+            📱 Số điện thoại nhận OTP (API2_DATA)
+          </label>
+          <input 
+            type="text" 
+            id="dataInput" 
+            placeholder="Ví dụ: 84123456789" 
+            class="w-full bg-slate-950 border border-slate-800 focus:border-slate-600 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-700/50 transition-all text-sm"
+          >
+        </div>
+
+        <!-- Input 3: GARENA_COOKIE (Vượt DataDome) -->
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <label for="cookieInput" class="text-sm font-medium text-slate-300">
+              🛡️ Cookie DataDome (GARENA_COOKIE)
+            </label>
+            <button onclick="toggleCookieHelp()" class="text-xs text-amber-400 hover:underline">
+              ❓ Cách lấy Cookie
+            </button>
+          </div>
+          <textarea 
+            id="cookieInput" 
+            rows="2" 
+            placeholder="Dán chuỗi Cookie (chứa datadome=...) từ F12 Network tab nếu bị lỗi 403..."
+            class="w-full bg-slate-950 border border-slate-800 focus:border-slate-600 rounded-xl px-4 py-2.5 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-700/50 transition-all font-mono custom-scrollbar"
+          ></textarea>
+          
+          <div id="cookieHelpBox" class="hidden mt-2 p-3 bg-amber-950/40 border border-amber-800/50 rounded-xl text-xs text-amber-200/90 leading-relaxed space-y-1">
+            <p><strong>3 bước lấy Cookie:</strong></p>
+            <p>1. Vào <a href="https://account.garena.com/recovery" target="_blank" class="underline font-bold">account.garena.com/recovery</a> và nhấn <strong>F12</strong> (Network tab).</p>
+            <p>2. Nhập tài khoản và bấm tiếp tục $\rightarrow$ tìm request <code>init</code> trong danh sách mạng.</p>
+            <p>3. Trong mục <strong>Headers</strong> $\rightarrow$ <strong>Request Headers</strong> $\rightarrow$ copy giá trị dòng <strong>Cookie</strong> và dán vào ô trên.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="pt-2 flex flex-col sm:flex-row gap-3">
+        <!-- Save Config Button -->
+        <button 
+          id="btnSave" 
+          onclick="handleSaveConfig()" 
+          class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-medium py-3 px-5 rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition active:scale-[0.98]"
+        >
+          <span>💾</span>
+          <span>Lưu Cấu Hình</span>
+        </button>
+
+        <!-- Trigger Run Button -->
+        <button 
+          id="btnTrigger" 
+          onclick="handleTriggerRun()" 
+          class="flex-1 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-semibold py-3 px-5 rounded-xl shadow-lg shadow-rose-900/30 flex items-center justify-center gap-2 transition active:scale-[0.98]"
+        >
+          <span>🚀</span>
+          <span>Kích Hoạt Chạy Ngay (Test)</span>
+        </button>
+      </div>
+
+      <!-- Toast Notification -->
+      <div id="statusToast" class="hidden p-3 rounded-xl text-sm text-center font-medium transition-all"></div>
+    </main>
+
+    <!-- Execution Logs Console -->
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          📟 Nhật Ký Hoạt Động Trực Tiếp (Live Console)
+        </h3>
+        <button 
+          onclick="clearLogs()" 
+          class="text-xs text-slate-500 hover:text-slate-300 px-2 py-1 rounded bg-slate-800/50 hover:bg-slate-800 transition"
+        >
+          Xóa log
+        </button>
+      </div>
+
+      <div 
+        id="consoleOutput" 
+        class="bg-black/80 rounded-xl p-4 font-mono text-xs text-slate-300 h-64 overflow-y-auto custom-scrollbar border border-slate-800/80 space-y-1"
+      >
+        <div class="text-slate-500">// Hệ thống sẵn sàng. Nhấn "Kích Hoạt Chạy Ngay" để kiểm tra tiến trình 2 Init x 3 Submit.</div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    const accountInput = document.getElementById('accountInput');
+    const dataInput = document.getElementById('dataInput');
+    const cookieInput = document.getElementById('cookieInput');
+    const lastUpdated = document.getElementById('lastUpdated');
+    const statusToast = document.getElementById('statusToast');
+    const consoleOutput = document.getElementById('consoleOutput');
+    const btnSave = document.getElementById('btnSave');
+    const btnTrigger = document.getElementById('btnTrigger');
+
+    function log(msg, type = 'info') {
+      const line = document.createElement('div');
+      const time = new Date().toLocaleTimeString();
+      let colorClass = 'text-slate-300';
+      if (type === 'success') colorClass = 'text-emerald-400 font-medium';
+      if (type === 'error') colorClass = 'text-rose-400 font-medium';
+      if (type === 'warn') colorClass = 'text-amber-400';
+      if (type === 'highlight') colorClass = 'text-sky-300';
+
+      line.className = `${colorClass} leading-relaxed break-all`;
+      line.innerHTML = `<span class="text-slate-500">[${time}]</span> ${msg}`;
+      consoleOutput.appendChild(line);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    function clearLogs() {
+      consoleOutput.innerHTML = '<div class="text-slate-500">// Đã xóa nhật ký.</div>';
+    }
+
+    function showToast(msg, isSuccess = true) {
+      statusToast.className = `p-3 rounded-xl text-sm text-center font-medium ${
+        isSuccess ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-300' : 'bg-rose-950/60 border border-rose-800 text-rose-300'
+      }`;
+      statusToast.textContent = msg;
+      statusToast.classList.remove('hidden');
+      setTimeout(() => statusToast.classList.add('hidden'), 4000);
+    }
+
+    function toggleCookieHelp() {
+      const box = document.getElementById('cookieHelpBox');
+      box.classList.toggle('hidden');
+    }
+
+    function copyAccount() {
+      if (!accountInput.value) return;
+      navigator.clipboard.writeText(accountInput.value);
+      showToast(`Đã sao chép: "${accountInput.value}"`, true);
+    }
+
+    // Nạp cấu hình khi mở trang
+    async function loadConfig() {
+      // 1. Kiểm tra localStorage trước
+      const cachedAccount = localStorage.getItem('garena_account');
+      const cachedData = localStorage.getItem('garena_data');
+      const cachedCookie = localStorage.getItem('garena_cookie');
+
+      if (cachedAccount) accountInput.value = cachedAccount;
+      if (cachedData) dataInput.value = cachedData;
+      if (cachedCookie) cookieInput.value = cachedCookie;
+
+      // 2. Tải từ API /api/config
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data) {
+            if (!accountInput.value || json.data.account) accountInput.value = json.data.account || 'nghjalsss';
+            if (!dataInput.value || json.data.api2_data) dataInput.value = json.data.api2_data || '84123456789';
+            if (json.data.cookie) cookieInput.value = json.data.cookie;
+            
+            if (json.data.updated_at) {
+              lastUpdated.textContent = `Cập nhật: ${new Date(json.data.updated_at).toLocaleString()}`;
+            }
+            log(`Đã tải cấu hình hiện tại: Tài khoản = "${accountInput.value}"`, 'highlight');
+          }
+        }
+      } catch (err) {
+        log(`Không thể đồng bộ với server, sử dụng cấu hình lưu cục bộ: ${err.message}`, 'warn');
+        lastUpdated.textContent = 'Dữ liệu lưu trình duyệt';
+      }
+    }
+
+    // Lưu cấu hình
+    async function handleSaveConfig() {
+      const account = accountInput.value.trim();
+      const api2_data = dataInput.value.trim();
+      const cookie = cookieInput.value.trim();
+
+      if (!account) {
+        showToast('Vui lòng nhập tài khoản Garena!', false);
+        return;
+      }
+
+      // Lưu localStorage
+      localStorage.setItem('garena_account', account);
+      localStorage.setItem('garena_data', api2_data);
+      localStorage.setItem('garena_cookie', cookie);
+
+      btnSave.disabled = true;
+      btnSave.classList.add('opacity-50');
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account, api2_data, cookie })
+        });
+
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast(`Đã lưu tài khoản "${account}" thành công!`, true);
+          lastUpdated.textContent = `Cập nhật: ${new Date().toLocaleTimeString()}`;
+          log(`✅ Cấu hình mới đã được lưu: Tài khoản = "${account}"`, 'success');
+        } else {
+          showToast(json.error || 'Lỗi khi lưu lên server', false);
+        }
+      } catch (err) {
+        showToast('Đã lưu vào bộ nhớ trình duyệt!', true);
+        log(`Lưu cục bộ thành công: "${account}"`, 'warn');
+      } finally {
+        btnSave.disabled = false;
+        btnSave.classList.remove('opacity-50');
+      }
+    }
+
+    // Kích hoạt chạy ngay
+    async function handleTriggerRun() {
+      const account = accountInput.value.trim();
+      const api2_data = dataInput.value.trim();
+      const cookie = cookieInput.value.trim();
+
+      if (!account) {
+        showToast('Vui lòng nhập tài khoản trước khi chạy!', false);
+        return;
+      }
+
+      // Tự động lưu trước khi chạy
+      handleSaveConfig();
+
+      btnTrigger.disabled = true;
+      btnTrigger.classList.add('opacity-50');
+      log(`-----------------------------------------------------------`);
+      log(`🚀 BẮT ĐẦU KÍCH HOẠT TIẾN TRÌNH: 2 Init x 3 Submit`, 'highlight');
+      log(`Tài khoản: "${account}" | Số điện thoại: "${api2_data}"`);
+      log(`Vui lòng chờ tiến trình hoàn tất...`);
+
+      try {
+        const res = await fetch('/api/cron', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-requested-from': 'web-ui'
+          },
+          body: JSON.stringify({
+            account,
+            api2_data,
+            cookie,
+            from_ui: true
+          })
+        });
+
+        const result = await res.json();
+        log(`Mã phản hồi từ Vercel: HTTP ${res.status}`);
+
+        if (result.success) {
+          log(`🎉 HOÀN TẤT TOÀN BỘ TIẾN TRÌNH (${result.total_duration_ms}ms)!`, 'success');
+          if (result.history) {
+            result.history.forEach((round, idx) => {
+              log(`📍 [ĐỢT INIT ${round.init_round}] Trạng thái: ${round.status} | request_id: ${round.extracted_request_id || 'N/A'}`, 'highlight');
+              if (round.submits) {
+                round.submits.forEach(s => {
+                  log(`   ↳ Submit ${s.submit_index}: HTTP ${s.http_status} - ${JSON.stringify(s.response || s.error)}`);
+                });
+              }
+            });
+          }
+          showToast('Tiến trình hoàn tất thành công!', true);
+        } else {
+          log(`❌ TIẾN TRÌNH GẶP LỖI: ${result.error}`, 'error');
+          if (result.captcha_url) {
+            log(`⚠️ Bị chặn bởi DataDome Captcha! Hãy cập nhật lại GARENA_COOKIE.`, 'warn');
+          }
+          showToast(result.error || 'Có lỗi xảy ra trong quá trình chạy', false);
+        }
+      } catch (err) {
+        log(`Lỗi kết nối tới endpoint /api/cron: ${err.message}`, 'error');
+        showToast(`Lỗi: ${err.message}`, false);
+      } finally {
+        btnTrigger.disabled = false;
+        btnTrigger.classList.remove('opacity-50');
+      }
+    }
+
+    // Khởi chạy khi load trang
+    window.addEventListener('DOMContentLoaded', loadConfig);
+  </script>
+</body>
+</html>
