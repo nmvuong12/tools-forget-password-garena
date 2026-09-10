@@ -1,55 +1,94 @@
 /**
- * API Endpoint: Lấy và Cập nhật cấu hình API1_ACCOUNT từ giao diện người dùng
+ * API Endpoint: Quản lý danh sách Đa Tài Khoản
+ * Các phương thức:
+ * - GET: Trả về danh sách tài khoản
+ * - POST: Thêm mới, cập nhật, xóa, hoặc bật/tắt tài khoản
  */
 
-const { getConfig, saveConfig } = require('../lib/storage');
+const {
+  getAllData,
+  getAccounts,
+  addOrUpdateAccount,
+  deleteAccount,
+  toggleAccount
+} = require('../lib/storage');
 
 module.exports = async (req, res) => {
-  // Cho phép CORS nếu gọi từ giao diện
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (typeof res.setHeader === 'function') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   try {
+    // 1. LẤY DANH SÁCH TÀI KHOẢN
     if (req.method === 'GET') {
-      const config = await getConfig();
+      const data = await getAllData();
       return res.status(200).json({
         success: true,
-        data: config
+        accounts: data.accounts || [],
+        updated_at: data.updated_at
       });
     }
 
+    // 2. THAO TÁC (THÊM / SỬA / XÓA / BẬT-TẮT)
     if (req.method === 'POST') {
       let body = req.body;
       if (typeof body === 'string') {
-        try {
-          body = JSON.parse(body);
-        } catch (e) {}
+        try { body = JSON.parse(body); } catch (e) {}
       }
 
-      if (!body || !body.account) {
-        return res.status(400).json({
-          success: false,
-          error: 'Thiếu trường account (tài khoản Garena).'
+      if (!body) {
+        return res.status(400).json({ success: false, error: 'Dữ liệu không hợp lệ' });
+      }
+
+      const action = body.action || 'add';
+
+      // Xóa tài khoản
+      if (action === 'delete') {
+        if (!body.id && !body.account) {
+          return res.status(400).json({ success: false, error: 'Thiếu id hoặc tên tài khoản để xóa' });
+        }
+        const updatedAccounts = await deleteAccount(body.id || body.account);
+        return res.status(200).json({
+          success: true,
+          message: 'Đã xóa tài khoản thành công',
+          accounts: updatedAccounts
         });
       }
 
-      const updated = await saveConfig({
-        account: body.account.trim(),
-        api2_data: body.api2_data ? body.api2_data.trim() : undefined,
-        cookie: body.cookie ? body.cookie.trim() : undefined
-      });
+      // Bật/tắt tài khoản
+      if (action === 'toggle') {
+        if (!body.id && !body.account) {
+          return res.status(400).json({ success: false, error: 'Thiếu id hoặc tên tài khoản' });
+        }
+        const updatedAccounts = await toggleAccount(body.id || body.account);
+        return res.status(200).json({
+          success: true,
+          message: 'Đã thay đổi trạng thái tài khoản',
+          accounts: updatedAccounts
+        });
+      }
 
-      console.log(`[CONFIG] Đã cập nhật tài khoản thành công: ${updated.account}`);
+      // Thêm mới hoặc cập nhật tài khoản
+      if (!body.account) {
+        return res.status(400).json({ success: false, error: 'Vui lòng nhập tên tài khoản Garena' });
+      }
+
+      const updatedAccounts = await addOrUpdateAccount({
+        account: body.account,
+        api2_data: body.api2_data,
+        cookie: body.cookie
+      });
 
       return res.status(200).json({
         success: true,
-        message: 'Cập nhật cấu hình thành công!',
-        data: updated
+        message: 'Đã thêm/cập nhật tài khoản vào danh sách',
+        accounts: updatedAccounts
       });
     }
 
